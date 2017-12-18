@@ -47,13 +47,16 @@ implementation {
   components SensorC, new TimerMilliC() as Timer;
   components new HamamatsuS1087ParC();
   components new SensirionSht11C();
+  components CounterMilli32C;
 
   SensorC.Control -> RadioControlC;
   SensorC.Timer -> Timer;
+  SensorC.LocalTime -> CounterMilli32C;
   SensorC.Forwarder -> ForwarderC;
   SensorC.Temperature -> SensirionSht11C.Temperature;
   SensorC.Humidity -> SensirionSht11C.Humidity;
   SensorC.Light -> HamamatsuS1087ParC;
+  SensorC.Leds -> LedsC;
 #else
   components NoSensorC;
   NoSensorC.Forwarder -> ForwarderC;

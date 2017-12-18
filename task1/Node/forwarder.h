@@ -13,7 +13,7 @@
 #endif
 
 #ifndef DOWN_QUEUE_LEN
-#define DOWN_QUEUE_LEN 512
+#define DOWN_QUEUE_LEN 32
 #endif
 
 #endif

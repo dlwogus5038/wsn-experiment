@@ -141,6 +141,7 @@ implementation {
         downTail = newTail;
       }
 #endif
+      reportReceived();
       signal Forwarder.receive(payload);
     }
     return msg;
