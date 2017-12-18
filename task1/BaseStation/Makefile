@@ -1,5 +1,0 @@
-COMPONENT=BaseStationAppC
-
-CFLAGS += -I../lib -DDOWNSTREAM=1 -DDISABLE_UP_ACK
-
-include $(MAKERULES)

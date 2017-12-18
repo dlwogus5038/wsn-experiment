@@ -53,20 +53,19 @@ implementation {
       goto error;
     memcpy(payload, upQueue + upHead, sizeof(UpPayload));
     if (
-#ifndef DISABLE_UP_ACK
+#ifndef BASESTATION
         call UpPacketAcks.requestAck(&upPacket) == SUCCESS &&
 #endif
-        call UpAMSend.send(0, &upPacket, sizeof(UpPayload)) == SUCCESS) {
+        call UpAMSend.send(UPSTREAM, &upPacket, sizeof(UpPayload)) == SUCCESS) {
       return;
     }
   error:
-    reportError();
     post upSendTask();
   }
 
   event void UpAMSend.sendDone(message_t *msg, error_t err) {
     if (err == SUCCESS
-#ifndef DISABLE_UP_ACK
+#ifndef BASESTATION
         && call UpPacketAcks.wasAcked(msg)
 #endif
        ) {
@@ -74,10 +73,8 @@ implementation {
       reportSent();
       if (upHead != upTail)
         post upSendTask();
-    } else {
-      reportError();
+    } else
       post upSendTask();
-    }
   }
 
 #ifdef DOWNSTREAM
@@ -92,7 +89,6 @@ implementation {
         call DownAMSend.send(downNodes[downNodesPos], &downPacket, sizeof(DownPayload)) == SUCCESS)
       return;
   error:
-    reportError();
     post downSendTask();
   }
 
@@ -105,10 +101,8 @@ implementation {
       reportSent();
       if (downHead != downTail)
         post downSendTask();
-    } else {
-      reportError();
+    } else
       post downSendTask();
-    }
   }
 #endif
 
@@ -126,8 +120,10 @@ implementation {
 
 #ifdef DOWNSTREAM
   event message_t *DownReceive.receive(message_t *msg, void *payload, uint8_t len) {
-    if (len == sizeof(UpPayload))
+    if (len == sizeof(UpPayload)) {
+      reportReceived();
       call Forwarder.send(payload);
+    }
     return msg;
   }
 #endif

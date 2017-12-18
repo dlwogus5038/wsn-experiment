@@ -1,22 +1,30 @@
 #include <Timer.h>
 #include "message.h"
 
-configuration SensorAppC {
+configuration AppC {
 }
 
 implementation {
   components MainC, LedsC;
 
-  components new ForwarderC(RecordMsg, ControlMsg);
+  components ActiveMessageC as RadioControlC;
+  components StartSplitControlC as StartRadioControlC;
+  StartRadioControlC -> MainC.Boot;
+  StartRadioControlC.Control -> RadioControlC;
 
-  components ActiveMessageC as ControlC;
-  components StartSplitControlC as StartControlC;
-
-  StartControlC -> MainC.Boot;
-  StartControlC.Control -> ControlC;
-
+#ifdef BASESTATION
+  components SerialActiveMessageC as SerialControlC;
+  components StartSplitControlC as StartSerialControlC;
+  StartSerialControlC -> MainC.Boot;
+  StartSerialControlC.Control -> SerialControlC;
+  components new SerialAMSenderC(AM_RECORDMSG) as UpAMSenderC;
+  components new SerialAMReceiverC(AM_CONTROLMSG) as UpAMReceiverC;
+#else
   components new AMSenderC(AM_RECORDMSG) as UpAMSenderC;
   components new AMReceiverC(AM_CONTROLMSG) as UpAMReceiverC;
+#endif
+
+  components new ForwarderC(RecordMsg, ControlMsg);
 
   ForwarderC.UpPacket -> UpAMSenderC;
   ForwarderC.UpAMSend -> UpAMSenderC;
@@ -35,8 +43,13 @@ implementation {
 
   ForwarderC.Leds -> LedsC;
 
+#ifdef SENSOR
   components SensorC, new TimerMilliC() as Timer;
-  SensorC.Control -> ControlC;
+  SensorC.Control -> RadioControlC;
   SensorC.Timer -> Timer;
   SensorC.Forwarder -> ForwarderC;
+#else
+  components NoSensorC;
+  NoSensorC.Forwarder -> ForwarderC;
+#endif
 }

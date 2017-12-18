@@ -20,6 +20,7 @@ implementation {
   event void Control.stopDone(error_t err) {}
 
   event void Timer.fired() {
+    msg.nodeid = TOS_NODE_ID;
     ++msg.time;
     call Forwarder.send(&msg);
   }
