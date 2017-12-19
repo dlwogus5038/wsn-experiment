@@ -152,7 +152,6 @@ def update_graphs(display_range):
                 'xaxis': {'title': '时间', 'range': [now - display_range, now]},
                 'yaxis': {'title': '光强 (Lux)'},
                 'showlegend': True,
-                #'margin': {'l': 30, 'r': 10, 'b': 30, 't': 10},
                 'legend': {'x': 0, 'y': 1}
             }
         }, id='light-traces')
@@ -169,12 +168,16 @@ def start_server():
         html.Div([
             html.Label([u'刷新间隔 ', html.Span('1', id='refresh-interval-text'), u's']),
             dcc.Input(id='refresh-interval', type='number', value=1, min=1, max=3600),
-            html.Button('手动刷新', id='refresh-button'),
+            html.Label([u'显示时长 ', html.Span('1', id='display-range-text'), u'min']),
+            dcc.Input(id='display-range', type='number', value=1, min=1, max=60),
             html.Label([u'采样间隔 ', html.Span(str(sample_interval), id='sample-interval-text'), u'ms']),
             dcc.Input(id='sample-interval', type='number', value=sample_interval, min=10, max=10000, step=50),
-            html.Button('发送', id='send-button'),
-            html.Label([u'显示时长 ', html.Span('1', id='display-range-text'), u'min']),
-            dcc.Input(id='display-range', type='number', value=1, min=1, max=60)
+            html.Button(u'发送', id='send-button'),
+            html.Div([
+                html.Button(u'手动刷新', id='refresh-button'),
+                html.Button(u'同步时间', id='sync-time-button'),
+                html.Button(u'清空数据', id='clear-data-button')
+            ], style={'margin-top': 32})
         ]),
         html.Div([], id='graphs', style={'clear': 'both'}),
         dcc.Interval(
@@ -224,78 +227,102 @@ def start_server():
         display_range = max(min(display_range, 60), 1)
         return update_graphs(display_range)
 
+    @app.callback(Output('sync-time-button', 'children'),
+                  [Input('sync-time-button', 'n_clicks')])
+    def sync_time(n):
+        nodes_data_lock.acquire()
+        for nodeid in nodes_data:
+            nodes_data[nodeid]['time_sync'] = True
+        nodes_data_lock.release()
+        return u'同步时间'
+
+    @app.callback(Output('clear-data-button', 'children'),
+                  [Input('clear-data-button', 'n_clicks')])
+    def clear_data(n):
+        nodes_data_lock.acquire()
+        nodes_data.clear()
+        nodes_data_lock.release()
+        return u'清除数据'
+
     app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
     app.run_server()
 
 def start_serial():
     am = tos.AM()
-    with open('result.txt', 'w') as f:
-        while True:
-            p = am.read()
-            try:
-                while True:
-                    data = control_queue.get_nowait()
-                    msg = ControlMsg()
-                    msg.frequency = data[0]
-                    am.write(msg, AM_CONTROLMSG)
-                    print('Sent: ' + str(msg))
-            except Empty:
-                pass
-            if p and p.type == AM_RECORDMSG:
-                msg = RecordMsg(p.data)
+    while True:
+        p = am.read()
+        try:
+            while True:
+                data = control_queue.get_nowait()
+                msg = ControlMsg()
+                msg.frequency = data[0]
+                am.write(msg, AM_CONTROLMSG)
+                print('Sent: ' + str(msg))
+        except Empty:
+            pass
+        if p and p.type == AM_RECORDMSG:
+            msg = RecordMsg(p.data)
+            with open('result.txt', 'a') as f:
                 f.write('\t'.join([str(i) for i in [
                     msg.nodeid, msg.count, msg.temperature,
                     msg.humidity, msg.light, msg.time
                 ]]) + '\n')
-                print('Received: ' + str(msg))
-                nodes_data_lock.acquire()
-                data = nodes_data.get(msg.nodeid)
-                now = time.time()
-                if data is None:
+            print('Received: ' + str(msg))
+            nodes_data_lock.acquire()
+            data = nodes_data.get(msg.nodeid)
+            now = time.time()
+            if data is None:
+                temperature = -39.6 + 0.01 * msg.temperature
+                temperature = (temperature - 32) / 1.8
+                humidity = -4 + 0.0405 * msg.humidity + (-2.8 * 1e-6) * (msg.humidity ** 2)
+                data = {
+                    'count': msg.count,
+                    'time_delta': now - msg.time / 1e3,
+                    'duplicated': 0,
+                    'lost': 0,
+                    'reset': 0,
+                    'time_data': [datetime.datetime.fromtimestamp(now)],
+                    'temperature_data': [temperature],
+                    'humidity_data': [humidity],
+                    'light_data': [0.625 * 10 * msg.light * 1.5 / 4.096],
+                    'sample_rate': None,
+                    'time_sync': False
+                }
+                nodes_data[msg.nodeid] = data
+            else:
+                ahead = (msg.count + 0x10000 - data['count']) % 0x10000
+                behind = (data['count'] + 0x10000 - msg.count) % 0x10000
+                if 0 <= behind < PACKET_DUPLICATED_THRESHOLD:
+                    data['duplicated'] += 1
+                else:
+                    if 0 < ahead < PACKET_LOST_THRESHOLD:
+                        data['lost'] += ahead - 1
+                        if data['time_sync']:
+                            print('sync')
+                            data['time_delta'] = now - msg.time / 1e3
+                            data['time_data'].append(datetime.datetime.fromtimestamp(now))
+                            data['time_sync'] = False
+                        else:
+                            data['time_data'].append(datetime.datetime.fromtimestamp(data['time_delta'] + msg.time / 1e3))
+                        sample_rate = data['sample_rate']
+                        new_sample_rate = (data['time_data'][-1] - data['time_data'][-2]).total_seconds() / ahead
+                        if sample_rate is None:
+                            data['sample_rate'] = new_sample_rate
+                        else:
+                            data['sample_rate'] = new_sample_rate * MOVING_AVERAGE_R + sample_rate * (1 - MOVING_AVERAGE_R)
+                    else:
+                        data['reset'] += 1
+                        data['time_delta'] = now - msg.time / 1e3
+                        data['time_data'].append(datetime.datetime.fromtimestamp(now))
+                        data['sample_rate'] = None
+                    data['count'] = msg.count
                     temperature = -39.6 + 0.01 * msg.temperature
                     temperature = (temperature - 32) / 1.8
                     humidity = -4 + 0.0405 * msg.humidity + (-2.8 * 1e-6) * (msg.humidity ** 2)
-                    data = {
-                        'count': msg.count,
-                        'time_delta': now - msg.time / 1e3,
-                        'duplicated': 0,
-                        'lost': 0,
-                        'reset': 0,
-                        'time_data': [datetime.datetime.fromtimestamp(now)],
-                        'temperature_data': [temperature],
-                        'humidity_data': [humidity],
-                        'light_data': [0.625 * 10 * msg.light * 1.5 / 4.096],
-                        'sample_rate': None
-                    }
-                    nodes_data[msg.nodeid] = data
-                else:
-                    ahead = (msg.count + 0x10000 - data['count']) % 0x10000
-                    behind = (data['count'] + 0x10000 - msg.count) % 0x10000
-                    if 0 <= behind < PACKET_DUPLICATED_THRESHOLD:
-                        data['duplicated'] += 1
-                    else:
-                        if 0 < ahead < PACKET_LOST_THRESHOLD:
-                            data['lost'] += ahead - 1
-                            data['time_data'].append(datetime.datetime.fromtimestamp(data['time_delta'] + msg.time / 1e3))
-                            sample_rate = data['sample_rate']
-                            new_sample_rate = (data['time_data'][-1] - data['time_data'][-2]).total_seconds() / ahead
-                            if sample_rate is None:
-                                data['sample_rate'] = new_sample_rate
-                            else:
-                                data['sample_rate'] = new_sample_rate * MOVING_AVERAGE_R + sample_rate * (1 - MOVING_AVERAGE_R)
-                        else:
-                            data['reset'] += 1
-                            data['time_delta'] = now - msg.time / 1e3
-                            data['time_data'].append(datetime.datetime.fromtimestamp(now))
-                            data['sample_rate'] = None
-                        data['count'] = msg.count
-                        temperature = -39.6 + 0.01 * msg.temperature
-                        temperature = (temperature - 32) / 1.8
-                        humidity = -4 + 0.0405 * msg.humidity + (-2.8 * 1e-6) * (msg.humidity ** 2)
-                        data['temperature_data'].append(temperature)
-                        data['humidity_data'].append(humidity)
-                        data['light_data'].append(0.625 * 10 * msg.light * 1.5 / 4.096)
-                nodes_data_lock.release()
+                    data['temperature_data'].append(temperature)
+                    data['humidity_data'].append(humidity)
+                    data['light_data'].append(0.625 * 10 * msg.light * 1.5 / 4.096)
+            nodes_data_lock.release()
 
 
 if __name__ == '__main__':
