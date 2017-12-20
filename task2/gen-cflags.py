@@ -12,4 +12,4 @@ task = [i['Task'] for i in reader if i['ID'] == sys.argv[1]][0].split(':')
 peers = ','.join([i['ID'] for i in reader if i['ID'] != sys.argv[1] and i['Role'] == 'Slave'])
 
 print('-DMASTER_SEND_ID=%s -DMASTER_RECEIVE_ID=%s -DSLAVE_COLLECT_ID=%s' % (master_send_id, master_receive_id, slave_collect_id)
-    + ''.join([' -DTASK_' + i.upper() for i in task]) + (' -DPEERS_ID=%s' % peers if peers else ''))
+    + ''.join([' -DTASK_' + i.upper() for i in task]) + (' -DPEERS_ID=%s' % peers if peers else '') + (' -DGROUP_ID=%d' % ((int(slave_collect_id) - 1) / 3 + 1)))
