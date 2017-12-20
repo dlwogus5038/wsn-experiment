@@ -66,8 +66,11 @@ implementation {
       while (call Temperature.read() != SUCCESS);
       while (call Humidity.read() != SUCCESS);
       while (call Light.read() != SUCCESS);
-    } else
+    }
+#ifdef SENSOR_REPORT_ERROR
+    else
       reportError();
+#endif
   }
 
   void checkSend() {
