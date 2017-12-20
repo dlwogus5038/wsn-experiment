@@ -171,7 +171,7 @@ def start_server():
             html.Label([u'显示时长 ', html.Span('1', id='display-range-text'), u'min']),
             dcc.Input(id='display-range', type='number', value=1, min=1, max=60),
             html.Label([u'采样间隔 ', html.Span(str(sample_interval), id='sample-interval-text'), u'ms']),
-            dcc.Input(id='sample-interval', type='number', value=sample_interval, min=10, max=10000, step=50),
+            dcc.Input(id='sample-interval', type='number', value=sample_interval, min=50, max=10000, step=50),
             html.Button(u'发送', id='send-button'),
             html.Div([
                 html.Button(u'手动刷新', id='refresh-button'),
@@ -200,7 +200,7 @@ def start_server():
                   [Input('send-button', 'n_clicks')],
                   [State('sample-interval', 'value')])
     def update_sample_interval(_, n):
-        sample_rate = max(min(n, 10000), 10)
+        sample_rate = max(min(n, 10000), 50)
         control_queue.put((sample_rate,))
         return str(sample_rate)
 
