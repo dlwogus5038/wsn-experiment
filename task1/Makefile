@@ -1,4 +1,4 @@
-all: node0
+all: install,0
 
 compile,%: FORCE
 	$(MAKE) -C Node telosb CFLAGS="$(shell python gen-cflags.py $*)"

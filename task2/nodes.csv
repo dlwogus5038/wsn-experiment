@@ -1,0 +1,4 @@
+ID,Role,Task
+0,Master,send:receive
+1,Slave,max:min:sum:average:median
+2,Slave,collect
