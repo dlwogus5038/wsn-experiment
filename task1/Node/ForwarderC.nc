@@ -83,7 +83,7 @@ implementation {
       DownPayload *payload = (DownPayload *) call DownAMSend.getPayload(&downPacket, sizeof(DownPayload));
       if (!payload)
         goto error;
-        memcpy(payload, downQueue + downHead, sizeof(DownPayload));
+      memcpy(payload, downQueue + downHead, sizeof(DownPayload));
     }
     if (call DownPacketAcks.requestAck(&downPacket) == SUCCESS &&
         call DownAMSend.send(downNodes[downNodesPos], &downPacket, sizeof(DownPayload)) == SUCCESS)

@@ -197,15 +197,15 @@ implementation {
       if (new_ack_tail == ack_queue_tail || new_result_tail == result_queue_tail)
         reportError();
       else {
-        ResultMsg *result = (ResultMsg *) &payload;
+        ResultMsg *result = (ResultMsg *) payload;
         ack_queue[ack_queue_tail].group_id = result->group_id;
         memcpy(result_queue + result_queue_tail, result, sizeof(ResultMsg));
-        ack_queue_tail = new_ack_tail;
-        result_queue_tail = new_result_tail;
         if (ack_queue_head == ack_queue_tail)
           post sendAck();
         if (result_queue_head == result_queue_tail)
           post sendResult();
+        ack_queue_tail = new_ack_tail;
+        result_queue_tail = new_result_tail;
         reportReceived();
       }
     }
