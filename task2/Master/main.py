@@ -4,7 +4,7 @@ import os
 os.environ['MOTECOM'] = 'serial@/dev/ttyUSB0:115200'
 import tos
 
-AM_ID = 6
+AM_ID = 0
 
 class RecordMsg(tos.Packet):
     def __init__(self, packet=None):

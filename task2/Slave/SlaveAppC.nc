@@ -12,6 +12,10 @@ implementation {
 
   CalculateC.Transport -> TransportC;
 
+  components new TimerMilliC() as Timer;
+
+  TransportC.Timer -> Timer;
+
   components ActiveMessageC;
 
   components new AMSenderC(AM_ID);

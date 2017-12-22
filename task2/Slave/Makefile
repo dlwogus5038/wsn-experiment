@@ -1,3 +1,5 @@
 COMPONENT=SlaveAppC
 
+override CFLAGS += -DQUERY_AFTER_SENDING
+
 include $(MAKERULES)

@@ -1,7 +1,7 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
-#define N_NUMBERS 500
+#define N_NUMBERS 2000
 
 #define MSG_RESULT_MAX     0
 #define MSG_RESULT_MIN     1
@@ -11,8 +11,14 @@
 
 #define MSG_RESULT_BITS   0x1f
 
-#define AM_ID 6
+#define AM_ID 0
 #define SEND_DATA_INTERVAL 10
+#define TEST_SEND_INTERVAL 100
+
+#define DATA_LOST_QUEUE_LEN 512
+// Much smaller because overflow is not a big deal
+#define DATA_ANSWER_QUEUE_LEN 16
+#define RESULT_QUEUE_LEN 6
 
 // 6
 typedef nx_struct DataMsg {
@@ -29,7 +35,6 @@ typedef nx_struct ResultMsg {
   nx_uint32_t average;
   nx_uint32_t median;
 } ResultMsg;
-
 
 // 1
 typedef nx_struct AckMsg {

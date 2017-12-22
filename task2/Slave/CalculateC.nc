@@ -22,10 +22,11 @@ implementation {
   #endif
   #ifdef TASK_MEDIAN
   uint32_t median;
+  #define MAX_COUNT (N_NUMBERS / 2 + 1)
   uint32_t numbers[N_NUMBERS];
   void insertSort(uint32_t key) {
     uint32_t i;
-    for(i = count; i > 0; --i) {
+    for(i = count > MAX_COUNT ? MAX_COUNT : count; i > 0; --i) {
       if(numbers[i-1] > key)
         numbers[i] = numbers[i-1];
       else

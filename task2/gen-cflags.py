@@ -10,6 +10,8 @@ master_receive_id = [i['ID'] for i in reader if i['Role'] == 'Master' and 'recei
 slave_collect_id = [i['ID'] for i in reader if i['Role'] == 'Slave' and 'collect' in i['Task'].split(':')][0]
 task = [i['Task'] for i in reader if i['ID'] == sys.argv[1]][0].split(':')
 peers = ','.join([i['ID'] for i in reader if i['ID'] != sys.argv[1] and i['Role'] == 'Slave'])
+backups = ','.join([i['ID'] for i in reader if i['ID'] != sys.argv[1] and i['Role'] == 'Slave' and 'backup' in i['Task'].split(':')])
 
 print('-DMASTER_SEND_ID=%s -DMASTER_RECEIVE_ID=%s -DSLAVE_COLLECT_ID=%s' % (master_send_id, master_receive_id, slave_collect_id)
-    + ''.join([' -DTASK_' + i.upper() for i in task]) + (' -DPEERS_ID=%s' % peers if peers else '') + (' -DGROUP_ID=%d' % ((int(slave_collect_id) - 1) / 3 + 1)))
+    + ''.join([' -DTASK_' + i.upper() for i in task]) + (' -DPEERS_ID=%s' % peers if peers else '')
+    + (' -DBACKUPS_ID=%s' % backups if backups else '') + (' -DGROUP_ID=%d' % ((int(slave_collect_id) - 1) / 3 + 1)))
