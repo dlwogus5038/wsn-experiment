@@ -24,36 +24,42 @@ implementation {
   uint32_t median;
   #define MAX_COUNT (N_NUMBERS / 2 + 1)
   uint32_t numbers[N_NUMBERS];
-  void insertSort(uint32_t key) {
-    uint32_t i;
-    for(i = count > MAX_COUNT ? MAX_COUNT : count; i > 0; --i) {
-      if(numbers[i-1] > key)
-        numbers[i] = numbers[i-1];
+  uint32_t partition(uint32_t *array, uint32_t begin, uint32_t end) {
+    uint32_t beginOfLatterArray = begin, value = array[end], temp, i;
+    for (i = begin; i < end; ++i) {
+      if (array[i] < value) {
+        temp = array[i];
+        array[i] = array[beginOfLatterArray];
+        array[beginOfLatterArray] = temp;
+        ++beginOfLatterArray;
+      }
+    }
+    temp = array[end];
+    array[end] = array[beginOfLatterArray];
+    array[beginOfLatterArray] = temp;
+    return beginOfLatterArray;
+  }
+  uint32_t getMedian() {
+    uint32_t begin = 0, end = count - 1, middle = (count-1) / 2;
+    uint32_t place;
+    uint32_t i, secondNumber;
+    do {
+      place = partition(numbers, begin, end);
+      if(place > middle)
+        end = place - 1;
+      else if(place < middle)
+        begin = place + 1;
       else
         break;
-    }
-    numbers[i] = key;
-  }
-  void binaryInsertSort(uint32_t key) {
-    uint32_t low = 0, high = count - 1, mid;
-    if(count == 0) {
-      numbers[count] = key;
-      return;
-    }
-    while(low < high) {
-      mid = low + ((high - low + 1) / 2);
-      if(numbers[mid] < key)
-        low = mid;
-      else
-        high = mid-1;
-    }
-    if(numbers[0] >= key) {
-      memmove(numbers + 1, numbers, count * sizeof(uint32_t));
-      numbers[0] = key;
-    }
-    else{
-      memmove(numbers + low + 2, numbers + low + 1, (count - 1 - low) * sizeof(uint32_t));
-      numbers[low+1] = key;
+    } while(place != middle);
+    if(count % 2)
+      return numbers[middle];
+    else {
+      for(i = middle + 1, secondNumber = ~0u; i < count; ++i) {
+        if(numbers[i] < secondNumber)
+          secondNumber = numbers[i];
+      }
+      return (numbers[middle] + secondNumber) / 2;
     }
   }
   #endif
@@ -69,7 +75,7 @@ implementation {
     sum += number;
     #endif
     #ifdef TASK_MEDIAN
-    insertSort(number);
+    numbers[count] = number;
     #endif
     ++count;
   }
@@ -85,12 +91,7 @@ implementation {
     call Transport.sendResult(MSG_RESULT_SUM, sum);
     #endif
     #ifdef TASK_MEDIAN
-    if(count % 2) {
-      median = numbers[count / 2];
-    }
-    else {
-      median = (numbers[count / 2] + numbers[(count /2) - 1]) / 2;
-    }
+    median = getMedian();
     call Transport.sendResult(MSG_RESULT_MEDIAN, median);
     #endif
     #ifdef TASK_AVERAGE
