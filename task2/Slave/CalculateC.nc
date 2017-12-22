@@ -30,6 +30,56 @@ implementation {
 
 #ifdef TASK_MEDIAN
   #ifdef MEDIAN_AFTER_SENDING
+    uint32_t numbers[N_NUMBERS];
+    uint32_t partition(uint32_t *array, uint32_t begin, uint32_t end) {
+      uint32_t beginOfLatterArray = begin, value, temp, i;
+      uint32_t mid = (begin + end) / 2;
+      if((array[begin] <= array[mid] && array[mid] < array[end]) ||
+        (array[end] < array[mid] && array[mid] <= array[begin])) {
+        value = array[mid];
+        array[mid] = array[end];
+      }
+      else if((array[mid] <= array[begin] && array[begin] < array[end]) ||
+              (array[end] < array[begin] && array[begin] <= array[mid])) {
+        value = array[begin];
+        array[begin] = array[end];
+      } else
+        value = array[end];
+      for (i = begin; i < end; ++i) {
+        if (array[i] < value) {
+          temp = array[i];
+          array[i] = array[beginOfLatterArray];
+          array[beginOfLatterArray] = temp;
+          ++beginOfLatterArray;
+        }
+      }
+      array[end] = array[beginOfLatterArray];
+      array[beginOfLatterArray] = value;
+      return beginOfLatterArray;
+    }
+    uint32_t getMedian() {
+      uint32_t begin = 0, end = count - 1, middle = (count-1) / 2;
+      uint32_t place;
+      uint32_t i, secondNumber;
+      do {
+        place = partition(numbers, begin, end);
+        if(place > middle)
+          end = place - 1;
+        else if(place < middle)
+          begin = place + 1;
+        else
+          break;
+      } while(place != middle);
+      if(count % 2)
+        return numbers[middle];
+      else {
+        for(i = middle + 1, secondNumber = ~0u; i < count; ++i) {
+          if(numbers[i] < secondNumber)
+            secondNumber = numbers[i];
+        }
+        return (numbers[middle] + secondNumber) / 2;
+      }
+    }
   #else
     #define MAX_COUNT (N_NUMBERS / 2 + 1)
     uint32_t numbers[MAX_COUNT + 1], numbers_num = 0;
@@ -110,18 +160,19 @@ implementation {
 
   event void Transport.receiveNumber(uint32_t number) {
     #ifdef TASK_MEDIAN
-    #ifdef MEDIAN_AFTER_SENDING
-    #else
-    uint32_t new_tail = (insert_tail + 1) % INSERT_QUEUE_LEN;
-    if (new_tail == insert_head)
-      reportError();
-    else {
-      insert_queue[insert_tail] = number;
-      if (insert_head == insert_tail)
-        post insertNumber();
-      insert_tail = new_tail;
-    }
-    #endif
+      #ifdef MEDIAN_AFTER_SENDING
+        numbers[count] = number;
+      #else
+        uint32_t new_tail = (insert_tail + 1) % INSERT_QUEUE_LEN;
+        if (new_tail == insert_head)
+          reportError();
+        else {
+          insert_queue[insert_tail] = number;
+          if (insert_head == insert_tail)
+            post insertNumber();
+          insert_tail = new_tail;
+        }
+      #endif
     #endif
     #ifdef TASK_MIN
     min = number < min ? number:min;
@@ -149,16 +200,18 @@ implementation {
     call Transport.sendResult(MSG_RESULT_AVERAGE, sum / count);
     #endif
     #ifdef TASK_MEDIAN
-    #ifdef MEDIAN_AFTER_SENDING
+      #ifdef MEDIAN_AFTER_SENDING
+        call Transport.sendResult(MSG_RESULT_MEDIAN, getMedian());
+        call Transport.sendDone();
+      #else
+        done = TRUE;
+        if (insert_head == insert_tail) {
+          sendMedian();
+          call Transport.sendDone();
+        }
+      #endif
     #else
-    done = TRUE;
-    if (insert_head == insert_tail) {
-      sendMedian();
       call Transport.sendDone();
-    }
-    #endif
-    #else
-    call Transport.sendDone();
     #endif
   }
 }
