@@ -25,7 +25,19 @@ implementation {
   #define MAX_COUNT (N_NUMBERS / 2 + 1)
   uint32_t numbers[N_NUMBERS];
   uint32_t partition(uint32_t *array, uint32_t begin, uint32_t end) {
-    uint32_t beginOfLatterArray = begin, value = array[end], temp, i;
+    uint32_t beginOfLatterArray = begin, value, temp, i;
+    uint32_t mid = (begin + end) / 2;
+    if((array[begin] <= array[mid] && array[mid] < array[end]) ||
+      (array[end] < array[mid] && array[mid] <= array[begin])) {
+      value = array[mid];
+      array[mid] = array[end];
+    }
+    else if((array[mid] <= array[begin] && array[begin] < array[end]) ||
+            (array[end] < array[begin] && array[begin] <= array[mid])) {
+      value = array[begin];
+      array[begin] = array[end];
+    } else
+      value = array[end];
     for (i = begin; i < end; ++i) {
       if (array[i] < value) {
         temp = array[i];
@@ -34,9 +46,8 @@ implementation {
         ++beginOfLatterArray;
       }
     }
-    temp = array[end];
     array[end] = array[beginOfLatterArray];
-    array[beginOfLatterArray] = temp;
+    array[beginOfLatterArray] = value;
     return beginOfLatterArray;
   }
   uint32_t getMedian() {
