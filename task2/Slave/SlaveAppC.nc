@@ -19,8 +19,10 @@ implementation {
 #endif
 
   components new TimerMilliC() as Timer;
+  components new TimerMilliC() as Timeout;
 
   TransportC.Timer -> Timer;
+  TransportC.Timeout -> Timeout;
 
   components ActiveMessageC;
 

@@ -6,6 +6,7 @@ module TransportC {
     interface Leds;
 
     interface Timer<TMilli> as Timer;
+    interface Timer<TMilli> as Timeout;
 
     interface SplitControl as Control;
 
@@ -106,7 +107,7 @@ implementation {
       if (!payload)
         goto error;
       memcpy(payload, result_queue + result_queue_head, sizeof(PartialResultMsg));
-      if (call PacketAcks.requestAck(&ack_packet) == SUCCESS &&
+      if (call PacketAcks.requestAck(&ack_packet) != SUCCESS ||
           call AMSend.send(SLAVE_COLLECT_ID, &ack_packet, sizeof(PartialResultMsg)) != SUCCESS)
         goto error;
       return;
@@ -172,7 +173,7 @@ implementation {
 #ifdef TASK_COLLECT
           result_send_enabled = FALSE;
 #else
-          result_queue_head = (result_queue_head + 1) / RESULT_QUEUE_LEN;
+          result_queue_head = (result_queue_head + 1) % RESULT_QUEUE_LEN;
 #endif
           break;
 #ifdef BACKUPS_ID
@@ -230,12 +231,35 @@ implementation {
 #endif
   }
 
+  event void Timeout.fired() {
+    uint32_t new_lost_tail;
+    if (data_seq == N_NUMBERS)
+      return;
+    ++data_seq;
+    new_lost_tail = (data_lost_tail + 1) % DATA_LOST_QUEUE_LEN;
+    if (new_lost_tail == data_lost_head)
+      reportError();
+    else {
+      data_lost[data_lost_tail] = data_seq;
+      data_lost_tail = new_lost_tail;
+      if (sending == NOT_SENDING
+#ifdef QUERY_AFTER_SENDING
+          && data_seq == N_NUMBERS
+#endif
+         )
+        post send();
+      if (data_seq != N_NUMBERS)
+        call Timeout.startOneShot(NEXT_SEQ_TIMEOUT);
+    }
+  }
+
   event message_t *Receive.receive(message_t *msg, void *payload, uint8_t len) {
     am_addr_t source = call AMPacket.source(msg);
     if (len == sizeof(DataMsg)) {
       DataMsg *data_msg = (DataMsg *) payload;
       if ((data_seq == N_NUMBERS && data_lost_head == data_lost_tail) ||
-          data_msg->sequence_number == 0 || data_msg->sequence_number > N_NUMBERS)
+          data_msg->sequence_number == 0 || data_msg->sequence_number > N_NUMBERS ||
+          (data_seq == 0 && data_msg->sequence_number > MINIMUM_START_SEQ))
         return msg;
       if (source != MASTER_SEND_ID) {
 #ifdef BACKUPS_ID
@@ -284,13 +308,15 @@ implementation {
       reportReceived();
       signal Transport.receiveNumber(data_msg->random_integer);
       if (data_seq == N_NUMBERS) {
+        call Timeout.stop();
         if (data_lost_head == data_lost_tail)
           signal Transport.receiveDone();
 #ifdef QUERY_AFTER_SENDING
         else if (sending == NOT_SENDING)
           post send();
 #endif
-      }
+      } else
+        call Timeout.startOneShot(NEXT_SEQ_TIMEOUT);
     }
 #if defined(TASK_BACKUP) && defined(PEERS_ID)
     else if (len == sizeof(QueryMsg)) {
