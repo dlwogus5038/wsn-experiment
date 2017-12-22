@@ -303,10 +303,10 @@ implementation {
           break;
       if (i == PEERS_ID_LEN)
         return msg;
+      reportReceived();
       for (i = data_lost_head; i != data_lost_tail; i = (i + 1) % DATA_LOST_QUEUE_LEN)
         if (data_lost[i] == query->sequence_number)
           return msg;
-      reportReceived();
       i = (data_answer_tail + 1) % DATA_ANSWER_QUEUE_LEN;
       if (data_answer_head != i) {
         data_answer[data_answer_tail].nodeid = source;
@@ -341,5 +341,8 @@ implementation {
     }
 #endif
     return msg;
+  }
+
+  command void Transport.sendDone() {
   }
 }

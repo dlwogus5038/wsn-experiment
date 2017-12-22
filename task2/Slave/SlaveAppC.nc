@@ -11,6 +11,12 @@ implementation {
   TransportC.Leds -> LedsC;
 
   CalculateC.Transport -> TransportC;
+  CalculateC.Leds -> LedsC;
+
+#if defined(TASK_MEDIAN) && !defined(MEDIAN_AFTER_SENDING)
+  components Msp430DmaC;
+  CalculateC.Msp430DmaChannel -> Msp430DmaC.Channel0;
+#endif
 
   components new TimerMilliC() as Timer;
 

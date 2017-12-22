@@ -36,12 +36,12 @@ implementation {
 #endif
 
 #ifdef TASK_RECEIVE
-#define ACK_QUEUE_LEN 32
-#define RESULT_QUEUE_LEN 32
-  AckMsg ack_queue[ACK_QUEUE_LEN];
+#define MASTER_ACK_QUEUE_LEN 32
+#define MASTER_RESULT_QUEUE_LEN 32
+  AckMsg ack_queue[MASTER_ACK_QUEUE_LEN];
   uint32_t ack_queue_head = 0, ack_queue_tail = 0;
   message_t ack_packet;
-  ResultMsg result_queue[RESULT_QUEUE_LEN];
+  ResultMsg result_queue[MASTER_RESULT_QUEUE_LEN];
   uint32_t result_queue_head = 0, result_queue_tail = 0;
   message_t result_packet;
 #endif
@@ -153,7 +153,7 @@ implementation {
 #endif
 #ifdef TASK_RECEIVE
   if (err == SUCCESS) {
-    ack_queue_head = (ack_queue_head + 1) % ACK_QUEUE_LEN;
+    ack_queue_head = (ack_queue_head + 1) % MASTER_ACK_QUEUE_LEN;
     reportSent();
     if (ack_queue_head != ack_queue_tail)
       post sendAck();
@@ -176,7 +176,7 @@ implementation {
 
   event void SerialAMSend.sendDone(message_t *msg, error_t err) {
     if (err == SUCCESS) {
-      result_queue_head = (result_queue_head + 1) % RESULT_QUEUE_LEN;
+      result_queue_head = (result_queue_head + 1) % MASTER_RESULT_QUEUE_LEN;
       if (result_queue_head != result_queue_tail)
         post sendResult();
     } else
@@ -192,8 +192,8 @@ implementation {
       return msg;
 #endif
     if (len == sizeof(ResultMsg)) {
-      uint32_t new_ack_tail = (ack_queue_head + 1) % ACK_QUEUE_LEN;
-      uint32_t new_result_tail = (result_queue_head + 1) % RESULT_QUEUE_LEN;
+      uint32_t new_ack_tail = (ack_queue_head + 1) % MASTER_ACK_QUEUE_LEN;
+      uint32_t new_result_tail = (result_queue_head + 1) % MASTER_RESULT_QUEUE_LEN;
       if (new_ack_tail == ack_queue_tail || new_result_tail == result_queue_tail)
         reportError();
       else {

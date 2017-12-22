@@ -20,6 +20,9 @@
 #define DATA_ANSWER_QUEUE_LEN 16
 #define RESULT_QUEUE_LEN 6
 
+#define INSERT_QUEUE_LEN 512
+#define DMA_MEMMOVE_THRESHOLD 16
+
 // 6
 typedef nx_struct DataMsg {
   nx_uint16_t sequence_number;
