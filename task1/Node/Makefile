@@ -1,3 +1,5 @@
 COMPONENT=AppC
 
+# override CFLAGS += -DRECORD_QUEUE
+
 include $(MAKERULES)
