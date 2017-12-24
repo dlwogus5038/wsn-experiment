@@ -1,8 +1,16 @@
+<style>
+@media print {    
+    [data-cmd=toc] + ul {
+        display: none !important;
+    }
+}
+</style>
+
 <h1 style="text-align:center;">WSN实验报告</h1>
 <p style="text-align:center;">孙子平 2015013249 车行 2015013241 李在弦 2015080121</p>
 
 
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=4 orderedList=false} -->
 <!-- code_chunk_output -->
 
 * [1 题目一：多跳WSN数据采集](#1-题目一多跳wsn数据采集)
@@ -10,13 +18,14 @@
 		* [1.1.1 项目特色](#111-项目特色)
 		* [1.1.1 目录结构](#111-目录结构)
 		* [1.1.2 使用方式](#112-使用方式)
-	* [1.2 实现细节](#12-实现细节)
+	* [1.2 实现](#12-实现)
 		* [1.2.1 节点实现](#121-节点实现)
 		* [1.2.2 可视化实现](#122-可视化实现)
 * [2 题目二：多点协作Data Aggregation实验](#2-题目二多点协作data-aggregation实验)
+	* [2.1 关于](#21-关于)
+		* [2.1.1 项目特色](#211-项目特色)
 
 <!-- /code_chunk_output -->
-
 
 ## 1 题目一：多跳WSN数据采集
 
@@ -64,20 +73,19 @@ make install,<node_id>
 python Visualizer/main.py
 ```
 
-这时，可以浏览器打开`http://localhost:8050/`看到可视化的效果。我们效果如图。这里3个节点的Sensor都开启了，所有的湿度传感器都有问题，而1号节点的光照传感器也有问题。
-
-![Visualizer](https://cdn.pbrd.co/images/GZJr77e.png)
+这时，可以浏览器打开`http://localhost:8050/`看到可视化的效果。这里3个节点的Sensor都开启了，所有的湿度传感器都有问题，而1号节点的光照传感器也有问题。
 
 “刷新间隔”是指轮询服务器的间隔（实时改变），“显示时长”是下方各个表显示的x轴的范围（实时改变），“采样间隔”是每个节点的采样计时器触发的时间间隔（需要点击发送按钮改变）。
 
-“手动刷新”用于触发一次轮询。“同步时间”会将下一匹收到的包作为新的基准时间，推测新的包的真实发送时间，应当在网络条件较好的情况下再点击。“清楚数据”会清空显示的数据。
+“手动刷新”用于触发一次轮询。“同步时间”会将下一匹收到的包作为新的基准时间，推测新的包的真实发送时间，应当在网络条件较好的情况下再点击。“清除数据”会清空显示的数据。
 
 所有的图都可以缩放，查看细节数据。
 
 `result.txt`是收到的最原始数据，注意我们始终用append模式打开这个文件。重复的包也会被记录下来。
 
+![Visualizer](https://cdn.pbrd.co/images/GZJr77e.png)
 
-### 1.2 实现细节
+### 1.2 实现
 
 #### 1.2.1 节点实现
 
@@ -92,3 +100,7 @@ python Visualizer/main.py
 我们采用的数据可视化框架是[Dash by plotly](https://plot.ly/products/dash/)。数据采集则用的是TinyOS自带的Python SDK。具体实现上，我们启动了额外的线程专门用于串口通信。
 
 ## 2 题目二：多点协作Data Aggregation实验
+
+### 2.1 关于
+
+#### 2.1.1 项目特色
