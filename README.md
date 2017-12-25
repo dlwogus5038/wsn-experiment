@@ -89,8 +89,7 @@ python Visualizer/main.py
 
 `result.txt`是收到的最原始数据，注意我们始终用append模式打开这个文件。重复的包也会被记录下来。
 
-![Visualizer](https://cdn.pbrd.co/images/GZJr77e.png)		* [1.2.2 可视化实现](#122-可视化实现)
-
+![Visualizer](https://cdn.pbrd.co/images/GZJr77e.png)
 
 ### 1.2 实现
 
