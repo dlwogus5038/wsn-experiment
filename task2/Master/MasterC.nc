@@ -130,7 +130,7 @@ implementation {
     if (!payload)
       goto error;
     memcpy(payload, ack_queue + ack_queue_head, sizeof(AckMsg));
-    if (call RadioAMSend.send(3 * (payload->group_id - 1) + 1, &ack_packet, sizeof(AckMsg)) == SUCCESS)
+    if (call RadioAMSend.send(AM_BROADCAST_ADDR, &ack_packet, sizeof(AckMsg)) == SUCCESS)
       return;
   error:
     post sendAck();
